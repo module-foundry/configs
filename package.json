@@ -1,0 +1,164 @@
+{
+  "name": "@module-foundry/configs",
+  "version": "0.0.2",
+  "description": "Shared configuration profiles for NestJS, ReactJS, and SolidJS projects",
+  "keywords": [
+    "commitlint",
+    "eslint",
+    "prettier",
+    "shared-config",
+    "steiger",
+    "stylelint",
+    "typescript"
+  ],
+  "type": "module",
+  "sideEffects": false,
+  "files": [
+    "dist"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "license": "MIT",
+  "author": "Dmitry Maximyuk <d_maksimyk@vk.com>",
+  "engines": {
+    "node": ">=24.18.0",
+    "pnpm": ">=11.18.0"
+  },
+  "packageManager": "pnpm@11.18.0",
+  "scripts": {
+    "build": "node ./scripts/build.mjs",
+    "commitlint": "corepack pnpm --filter @module-foundry/configs-common run commitlint",
+    "lint-staged": "corepack pnpm --filter @module-foundry/configs-common run lint-staged",
+    "prepack": "node ./scripts/build.mjs",
+    "prepare": "corepack pnpm --filter @module-foundry/configs-common run husky",
+    "playground:nestjs": "node ./scripts/build.mjs && corepack pnpm --filter @module-foundry/playground-nestjs verify",
+    "playground:reactjs": "node ./scripts/build.mjs && corepack pnpm --filter @module-foundry/playground-reactjs verify",
+    "playground:solidjs": "node ./scripts/build.mjs && corepack pnpm --filter @module-foundry/playground-solidjs verify"
+  },
+  "peerDependencies": {
+    "@commitlint/cli": "^21.2.1",
+    "@commitlint/config-conventional": "^21.2.0",
+    "@eslint-community/eslint-plugin-eslint-comments": "^4.7.2",
+    "@eslint-react/eslint-plugin": "^5.18.1",
+    "@eslint/js": "^9.39.0 || ^10.0.0",
+    "@feature-sliced/steiger-plugin": "^0.7.0",
+    "@stylistic/eslint-plugin": "^5.10.0",
+    "eslint": "^9.39.5 || ^10.8.0",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-check-file": "^3.3.2",
+    "eslint-plugin-jsdoc": "^63.3.2",
+    "eslint-plugin-perfectionist": "^5.10.0",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "eslint-plugin-regexp": "^3.1.1",
+    "eslint-plugin-solid": "^0.14.5",
+    "eslint-plugin-sonarjs": "^4.2.0",
+    "eslint-plugin-unused-imports": "^4.4.1",
+    "globals": "^17.8.0",
+    "prettier": "^3.9.6",
+    "steiger": "^0.6.0",
+    "stylelint": "^17.14.1",
+    "stylelint-config-standard-scss": "^17.0.0",
+    "stylelint-order": "^8.1.1",
+    "typescript": ">=6.0.2 <8.0.0",
+    "typescript-eslint": "^8.65.0"
+  },
+  "peerDependenciesMeta": {
+    "@commitlint/cli": {
+      "optional": true
+    },
+    "@commitlint/config-conventional": {
+      "optional": true
+    },
+    "@eslint-community/eslint-plugin-eslint-comments": {
+      "optional": true
+    },
+    "@eslint-react/eslint-plugin": {
+      "optional": true
+    },
+    "@eslint/js": {
+      "optional": true
+    },
+    "@feature-sliced/steiger-plugin": {
+      "optional": true
+    },
+    "@stylistic/eslint-plugin": {
+      "optional": true
+    },
+    "eslint": {
+      "optional": true
+    },
+    "eslint-config-prettier": {
+      "optional": true
+    },
+    "eslint-plugin-check-file": {
+      "optional": true
+    },
+    "eslint-plugin-jsdoc": {
+      "optional": true
+    },
+    "eslint-plugin-perfectionist": {
+      "optional": true
+    },
+    "eslint-plugin-react-hooks": {
+      "optional": true
+    },
+    "eslint-plugin-regexp": {
+      "optional": true
+    },
+    "eslint-plugin-solid": {
+      "optional": true
+    },
+    "eslint-plugin-sonarjs": {
+      "optional": true
+    },
+    "eslint-plugin-unused-imports": {
+      "optional": true
+    },
+    "globals": {
+      "optional": true
+    },
+    "prettier": {
+      "optional": true
+    },
+    "steiger": {
+      "optional": true
+    },
+    "stylelint": {
+      "optional": true
+    },
+    "stylelint-config-standard-scss": {
+      "optional": true
+    },
+    "stylelint-order": {
+      "optional": true
+    },
+    "typescript": {
+      "optional": true
+    },
+    "typescript-eslint": {
+      "optional": true
+    }
+  },
+  "exports": {
+    "./commitlint": "./dist/common/commitlint.config.mjs",
+    "./prettier": "./dist/common/prettier.config.mjs",
+    "./steiger": "./dist/common/steiger.config.mjs",
+    "./stylelint": "./dist/common/stylelint.config.mjs",
+    "./nestjs/eslint": "./dist/nestjs/eslint.config.mjs",
+    "./nestjs/typescript": "./dist/nestjs/typescript.config.json",
+    "./reactjs/eslint": "./dist/reactjs/eslint.config.mjs",
+    "./reactjs/typescript": "./dist/reactjs/typescript.config.json",
+    "./solidjs/eslint": "./dist/solidjs/eslint.config.mjs",
+    "./solidjs/typescript": "./dist/solidjs/typescript.config.json",
+    "./package.json": "./package.json"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/module-foundry/configs.git"
+  },
+  "bugs": {
+    "url": "https://github.com/module-foundry/configs/issues"
+  },
+  "homepage": "https://github.com/module-foundry/configs#readme"
+}

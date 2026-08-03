@@ -1,0 +1,31 @@
+{
+  "name": "@module-foundry/playground-solidjs",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "lint": "eslint src",
+    "typecheck": "tsc --noEmit",
+    "verify": "tsc --noEmit && eslint src"
+  },
+  "devDependencies": {
+    "@eslint-community/eslint-plugin-eslint-comments": "^4.7.2",
+    "@eslint/js": "^9.39.5",
+    "@module-foundry/configs": "workspace:*",
+    "@stylistic/eslint-plugin": "^5.10.0",
+    "eslint": "^9.39.5",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-check-file": "^3.3.2",
+    "eslint-plugin-jsdoc": "^63.3.2",
+    "eslint-plugin-perfectionist": "^5.10.0",
+    "eslint-plugin-regexp": "^3.1.1",
+    "eslint-plugin-solid": "^0.14.5",
+    "eslint-plugin-sonarjs": "^4.2.0",
+    "eslint-plugin-unused-imports": "^4.4.1",
+    "globals": "^17.8.0",
+    "solid-js": "^1.9.14",
+    "typescript": "npm:@typescript/typescript6@^6.0.2",
+    "typescript-eslint": "^8.65.0",
+    "typescript-native": "npm:typescript@^7.0.2"
+  }
+}

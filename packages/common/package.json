@@ -1,0 +1,23 @@
+{
+  "name": "@module-foundry/configs-common",
+  "version": "0.0.2",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "commitlint": "cd ../.. && commitlint --config packages/common/src/commitlint.config.mjs",
+    "husky": "cd ../.. && husky",
+    "lint-staged": "cd ../.. && lint-staged"
+  },
+  "devDependencies": {
+    "@commitlint/cli": "^21.2.1",
+    "@commitlint/config-conventional": "^21.2.0",
+    "@feature-sliced/steiger-plugin": "^0.7.0",
+    "husky": "^9.1.7",
+    "lint-staged": "^17.3.0",
+    "prettier": "^3.9.6",
+    "steiger": "^0.6.0",
+    "stylelint": "^17.14.1",
+    "stylelint-config-standard-scss": "^17.0.0",
+    "stylelint-order": "^8.1.1"
+  }
+}

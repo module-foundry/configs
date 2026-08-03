@@ -1,0 +1,7 @@
+{
+  "extends": "@module-foundry/configs/nestjs/typescript",
+  "compilerOptions": {
+    "noEmit": true
+  },
+  "include": ["src"]
+}

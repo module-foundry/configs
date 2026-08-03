@@ -1,0 +1,7 @@
+$page-gap: 1rem;
+
+.page {
+  display: grid;
+
+  gap: $page-gap;
+}

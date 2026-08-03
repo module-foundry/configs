@@ -1,0 +1,4 @@
+{
+  "extends": "@module-foundry/configs/solidjs/typescript",
+  "include": ["src"]
+}

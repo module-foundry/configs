@@ -1,0 +1,19 @@
+# The root package.json `files` allowlist is authoritative. These exclusions are
+# a second guard against accidentally publishing repository-only content.
+.github/
+.husky/
+packages/
+playgrounds/
+scripts/
+
+.gitignore
+.npmignore
+AGENTS.md
+pnpm-lock.yaml
+pnpm-workspace.yaml
+
+node_modules/
+coverage/
+*.log
+*.tgz
+*.tsbuildinfo
