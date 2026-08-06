@@ -2,8 +2,8 @@ name: Publish package to npm
 
 on:
   push:
-    tags:
-      - "v*"
+    branches:
+      - "master"
 
 permissions:
   contents: read
