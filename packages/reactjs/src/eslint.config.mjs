@@ -26,7 +26,7 @@ const sourceFiles = ["**/*.{js,mjs,cjs,jsx,ts,mts,cts,tsx}"];
 const typescriptFiles = ["**/*.{ts,mts,cts,tsx}"];
 const frontendFiles = ["**/*.{js,jsx,ts,tsx}"];
 const componentFiles = ["**/*.{jsx,tsx}"];
-const separator = { newlinesBetween: 1 };
+const separator = { newlinesBetween: 2 };
 const inlineTypeImportRestriction = {
   selector: "ImportDeclaration[importKind='type']:has(ImportSpecifier)",
   message: "Use inline type specifiers: import { type Name } from 'module'.",
@@ -250,7 +250,7 @@ const typescriptRules = {
 const structuralRules = {
   "@stylistic/no-multiple-empty-lines": [
     "error",
-    { max: 1, maxBOF: 0, maxEOF: 0 },
+    { max: 2, maxBOF: 0, maxEOF: 0 },
   ],
   "@stylistic/lines-between-class-members": [
     "error",
@@ -354,7 +354,10 @@ const semanticSections = semanticGroups.map(
     return {
       customGroups: layers.flatMap(({ customGroups }) => customGroups),
       groups: [
-        ...layers.flatMap(({ groups }) => groups),
+        ...layers.flatMap(({ groups }, layerIndex) => [
+          ...groups,
+          ...(layerIndex < layers.length - 1 ? [separator] : []),
+        ]),
         ...(semanticIndex < semanticGroups.length - 1 ? [separator] : []),
       ],
     };
