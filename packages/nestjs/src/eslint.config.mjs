@@ -22,7 +22,7 @@ const MAX_NESTING_DEPTH = 4;
 
 const sourceFiles = ["**/*.{js,mjs,cjs,ts,mts,cts}"];
 const typescriptFiles = ["**/*.{ts,mts,cts}"];
-const separator = { newlinesBetween: 2 };
+const separator = { newlinesBetween: 1 };
 const inlineTypeImportRestriction = {
   selector: "ImportDeclaration[importKind='type']:has(ImportSpecifier)",
   message: "Use inline type specifiers: import { type Name } from 'module'.",
@@ -193,7 +193,7 @@ const typescriptRules = {
 const structuralRules = {
   "@stylistic/no-multiple-empty-lines": [
     "error",
-    { max: 2, maxBOF: 0, maxEOF: 0 },
+    { max: 1, maxBOF: 0, maxEOF: 0 },
   ],
   "@stylistic/lines-between-class-members": [
     "error",
