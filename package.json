@@ -1,6 +1,6 @@
 {
   "name": "@module-foundry/configs",
-  "version": "0.0.4",
+  "version": "0.0.5",
   "description": "Shared configuration profiles for NestJS, ReactJS, and SolidJS projects",
   "keywords": [
     "commitlint",
