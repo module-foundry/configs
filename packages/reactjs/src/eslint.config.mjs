@@ -272,38 +272,6 @@ const structuralRules = {
   ],
 };
 
-const fsdLayers = [
-  ["app", "@/app(?:/|$)"],
-  ["pages", "@/pages(?:/|$)"],
-  ["widgets", "@/widgets(?:/|$)"],
-  ["features", "@/features(?:/|$)"],
-  ["entities", "@/entities(?:/|$)"],
-  ["shared", "@/shared(?:/|$)"],
-  ["parent", "\\.\\.(?:/|$)"],
-  ["sibling", "\\./"],
-  ["root", "@/"],
-];
-const semanticGroups = [
-  ["config", "(?:config|constants?)(?:/|$)"],
-  ["utilities", "(?:lib|hooks?)(?:/|$)"],
-  ["api", "(?:api|requests?)(?:/|$)"],
-  ["models", "(?:model|models|store|types?)(?:/|$)"],
-  [
-    "components",
-    "(?:(?:ui|components?)(?:/|$)|@/(?:pages|widgets|features|entities)/[^/]+$)",
-  ],
-  [
-    "assets",
-    "(?:assets?)(?:/|$)|\\.(?:avif|bmp|gif|ico|jpe?g|png|svg|webp|woff2?)(?:\\?.*)?$",
-  ],
-  ["other", null],
-];
-const importForms = [
-  ["mixed", ["default", "named"]],
-  ["default", ["default"]],
-  ["named", ["named"]],
-  ["wildcard", ["wildcard"]],
-];
 const baseImportOrder = {
   order: "asc",
   type: "natural",
@@ -321,49 +289,6 @@ const customGroup = (groupName, elementNamePattern, modifiers) => ({
   ...(modifiers && { modifiers }),
 });
 
-const createLayer = (
-  semanticName,
-  semanticPattern,
-  layerName,
-  layerPattern,
-) => {
-  const prefix = `${semanticName}-${layerName}`;
-  const name = (form) => `${prefix}-${form}`;
-  const elementNamePattern = semanticPattern
-    ? `^(?=${layerPattern})(?=.*${semanticPattern})`
-    : `^${layerPattern}`;
-  const groups =
-    semanticName === "assets"
-      ? [[name("named"), name("wildcard")], name("mixed"), name("default")]
-      : [name("default"), name("mixed"), [name("named"), name("wildcard")]];
-
-  return {
-    groups,
-    customGroups: importForms.map(([form, modifiers]) =>
-      customGroup(name(form), elementNamePattern, modifiers),
-    ),
-  };
-};
-
-const semanticSections = semanticGroups.map(
-  ([semanticName, semanticPattern], semanticIndex) => {
-    const layers = fsdLayers.map(([layerName, layerPattern]) =>
-      createLayer(semanticName, semanticPattern, layerName, layerPattern),
-    );
-
-    return {
-      customGroups: layers.flatMap(({ customGroups }) => customGroups),
-      groups: [
-        ...layers.flatMap(({ groups }, layerIndex) => [
-          ...groups,
-          ...(layerIndex < layers.length - 1 ? [separator] : []),
-        ]),
-        ...(semanticIndex < semanticGroups.length - 1 ? [separator] : []),
-      ],
-    };
-  },
-);
-
 const namedImportOrder = {
   order: "asc",
   type: "natural",
@@ -377,6 +302,7 @@ const createFrontendImportOrder = (frameworkGroups) => ({
   internalPattern: ["^@/"],
   groups: [
     "styles",
+    "side-effect-style",
     separator,
     ...frameworkGroups.map(([name]) => name),
     ["value-external", "type-external"],
@@ -384,10 +310,8 @@ const createFrontendImportOrder = (frameworkGroups) => ({
     "valibot",
     "clsx",
     separator,
-    ...semanticSections.flatMap(({ groups }) => groups),
-    separator,
-    "side-effect",
-    "unknown",
+    // Preserve author-defined ordering and spacing for local imports.
+    { group: "unknown", type: "unsorted", newlinesInside: "ignore" },
   ],
   customGroups: [
     customGroup("styles", "\\.(?:css|less|sass|scss|styl)(?:\\?.*)?$"),
@@ -395,7 +319,6 @@ const createFrontendImportOrder = (frameworkGroups) => ({
     customGroup("zod", "^zod(?:/|$)"),
     customGroup("valibot", "^valibot(?:/|$)"),
     customGroup("clsx", "^clsx$"),
-    ...semanticSections.flatMap(({ customGroups }) => customGroups),
   ],
 });
 
