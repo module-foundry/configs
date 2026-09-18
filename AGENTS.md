@@ -36,8 +36,8 @@ Every maintenance change must preserve these invariants:
    wildcard exports are not part of the API.
 5. External tools and plugins remain optional peer dependencies, so consumers
    install only what their selected presets require.
-6. NestJS and ReactJS use ESLint 10. SolidJS remains on ESLint 9 while
-   `eslint-plugin-solid` does not support ESLint 10.
+6. All profiles use ESLint 10. `eslint-plugin-solid` supports ESLint 10 from
+   version 0.18.0.
 7. Each framework profile owns one complete ESLint preset and one complete
    TypeScript preset.
 8. Framework presets do not import, extend, or re-export implementation files
@@ -109,12 +109,13 @@ The compatibility lanes are independent:
 | ------- | ------ | ----------------------------------------------------- |
 | NestJS  | 10     | Current NestJS preset dependencies support ESLint 10. |
 | ReactJS | 10     | Current React plugins support ESLint 10.              |
-| SolidJS | 9      | `eslint-plugin-solid` supports ESLint only through 9. |
+| SolidJS | 10     | `eslint-plugin-solid` supports ESLint 10 from 0.18.0. |
 
-Never unify these versions for lockfile convenience. Before updating ESLint or
-an ESLint plugin, inspect the package's declared peer range and validate only
-the compatible profile lanes. Installation under hoisting is not evidence of
-published compatibility.
+Before updating ESLint or an ESLint plugin, inspect the package's declared peer
+range and validate only the compatible profile lanes. Installation under
+hoisting is not evidence of published compatibility. When bumping a frontend
+plugin, review newly added warn-level rules in its preset and either promote
+them to errors or disable them, so the presets stay warning-free.
 
 Preserve the following behavior in every type-aware profile:
 
@@ -122,23 +123,36 @@ Preserve the following behavior in every type-aware profile:
   `parserOptions.tsconfigRootDir` to `cwd()`;
 - do not use the global `process` or `import.meta.dirname` for the consumer
   TypeScript project root;
-- keep `@typescript-eslint/consistent-type-imports` configured with
-  `fixStyle: "inline-type-imports"`;
-- accept named type imports as `import { type JSX } from "react"` and reject
-  `import type { JSX } from "react"` with a local `no-restricted-syntax`
-  selector;
-- keep `@typescript-eslint/no-import-type-side-effects` disabled;
-- do not apply the named-import restriction to default or namespace type
-  imports;
+- accept root-level config files outside `tsconfig.json` through
+  `parserOptions.projectService.allowDefaultProject`;
+- emit no warnings: every enabled rule is an error, and advisory warn-level
+  rules from framework plugin presets are either promoted to errors or
+  deliberately disabled;
+- report unused `eslint-disable` directives as errors and require a description
+  on every disable directive through `eslint-comments/require-description`;
+- keep `console.log` an error while allowing `console.warn` and `console.error`,
+  and require named constants through `no-magic-numbers`;
+- require meaningful JSDoc descriptions and descriptions on `@returns` and
+  `@throws` tags;
 - enforce `kebab-case` for JavaScript and TypeScript source filenames and folder
   names through `eslint-plugin-check-file`, while allowing middle extensions
-  and the `__tests__` and `__mocks__` folders.
+  and the `__tests__` and `__mocks__` folders;
+- keep Next.js App Router exceptions: `app/**` folders may use dynamic,
+  grouped, and parallel-route names;
+- exempt test, story, and mock files (`*.test.*`, `*.spec.*`, `*.stories.*`,
+  `__tests__`, `__mocks__`) from the default-export requirement, `no-console`,
+  and `no-magic-numbers`.
 
 ReactJS and SolidJS treat every `.jsx` and `.tsx` file as a component file.
-Each such file must contain an `ExportDefaultDeclaration` and must not contain
-an `ExportNamedDeclaration`. Uppercase component functions containing JSX must
-use a block body and an explicit `return`. Keep these checks local to each
+Each such file must contain an `ExportDefaultDeclaration`; named exports such as
+interfaces and types are allowed. Uppercase component functions containing JSX
+must use a block body and an explicit `return`. Next.js `app/**`, test, story,
+and mock files have the documented exceptions. Keep these checks local to each
 autonomous profile through `no-restricted-syntax` selectors.
+
+SolidJS props are checked by `eslint-plugin-solid` (`solid/no-destructure` is an
+error and `solid/reactivity` is promoted to an error). Do not reintroduce local
+props selectors.
 
 Do not add local rule modules, `create(context)` implementations, inline plugin
 objects, or custom plugin packages. When an external plugin is explicitly
@@ -167,12 +181,18 @@ Every imported external package must appear in all applicable locations:
 Do not replace optional peers with `optionalDependencies`; package managers
 install optional dependencies by default, which breaks dependency isolation.
 
-`typescript-eslint` currently requires the TypeScript compiler API below 6.1.
-Preserve the playground arrangement until upstream support changes:
+`typescript-eslint` currently requires TypeScript below 6.1. The ReactJS and
+SolidJS lanes install the latest compatible release directly; do not introduce
+alias packages such as `@typescript/typescript6` or `typescript-native` there:
 
-- TypeScript 6 is installed under `typescript` for ESLint integration;
-- TypeScript 7 is installed through the `typescript-native` alias for the `tsc`
-  executable.
+- the root `typescript` peer range follows the `typescript-eslint` ceiling
+  (`>=6.0.2 <6.1.0`);
+- the frontend playgrounds install the latest compatible release (`^6.0.3`);
+- raise the ceiling in a release when upstream `typescript-eslint` supports
+  TypeScript 7.
+
+The NestJS playground keeps its existing alias arrangement until the NestJS
+profile is reworked.
 
 ## Generated and published contents
 

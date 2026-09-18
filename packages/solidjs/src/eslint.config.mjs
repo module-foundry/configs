@@ -2,448 +2,203 @@ import { cwd } from "node:process";
 
 import eslintComments from "@eslint-community/eslint-plugin-eslint-comments";
 import eslint from "@eslint/js";
-import stylistic from "@stylistic/eslint-plugin";
 import prettierConfig from "eslint-config-prettier/flat";
 import checkFile from "eslint-plugin-check-file";
 import jsdoc from "eslint-plugin-jsdoc";
-import perfectionist from "eslint-plugin-perfectionist";
-import regexp from "eslint-plugin-regexp";
 import solid from "eslint-plugin-solid";
-import sonarjs from "eslint-plugin-sonarjs";
-import unusedImports from "eslint-plugin-unused-imports";
 import globals from "globals";
 import tseslint from "typescript-eslint";
-
-const COGNITIVE_COMPLEXITY_LIMIT = 15;
-const COMPLEXITY_LIMIT = 12;
-const FUNCTION_LINE_LIMIT = 100;
-const FUNCTION_PARAMETER_LIMIT = 5;
-const JSDOC_DESCRIPTION_LIMIT = 300;
-const MAX_NESTING_DEPTH = 4;
 
 const sourceFiles = ["**/*.{js,mjs,cjs,jsx,ts,mts,cts,tsx}"];
 const typescriptFiles = ["**/*.{ts,mts,cts,tsx}"];
 const frontendFiles = ["**/*.{js,jsx,ts,tsx}"];
 const componentFiles = ["**/*.{jsx,tsx}"];
-const separator = { newlinesBetween: 1 };
-const inlineTypeImportRestriction = {
-  selector: "ImportDeclaration[importKind='type']:has(ImportSpecifier)",
-  message: "Use inline type specifiers: import { type Name } from 'module'.",
-};
-const solidReactiveGroups = [
-  {
-    name: "signals and reactive sources",
-    selector:
-      "VariableDeclaration:has(CallExpression[callee.name=/^create(?!(?:Memo|Selector|Deferred|Computed|RenderEffect|Effect|Reaction)$)[A-Z]/])",
-  },
-  {
-    name: "constants",
-    selector:
-      "VariableDeclaration:not(:has(CallExpression[callee.name=/^create[A-Z]/])):not(:has(VariableDeclarator[init.type=/^(?:ArrowFunctionExpression|FunctionExpression)$/]))",
-  },
-  {
-    name: "memoized values",
-    selector:
-      "VariableDeclaration:has(CallExpression[callee.name=/^(?:createMemo|createSelector|createDeferred)$/])",
-  },
-  {
-    name: "handlers",
-    selector:
-      "VariableDeclaration:has(VariableDeclarator[init.type=/^(?:ArrowFunctionExpression|FunctionExpression)$/])",
-  },
-  {
-    name: "effects",
-    selector:
-      "ExpressionStatement:has(> CallExpression[callee.name=/^(?:createComputed|createRenderEffect|createEffect|createReaction|onMount|onCleanup)$/])",
-  },
-];
-const solidReactiveGroupOrder = solidReactiveGroups
-  .map(({ name }) => name)
-  .join(", ");
-const solidReactiveOrderRestrictions = solidReactiveGroups.flatMap(
-  (earlierGroup, earlierIndex) =>
-    solidReactiveGroups.slice(earlierIndex + 1).map((laterGroup) => ({
-      selector: `BlockStatement > ${laterGroup.selector} ~ ${earlierGroup.selector}`,
-      message: `Keep Solid component groups in this order: ${solidReactiveGroupOrder}.`,
-    })),
-);
-const solidEffectSelector = solidReactiveGroups.at(-1).selector;
-const solidReactivePaddingRules = solidReactiveGroups.flatMap(
-  (earlierGroup, earlierIndex) =>
-    solidReactiveGroups.slice(earlierIndex + 1).map((laterGroup) => ({
-      blankLine: "always",
-      prev: { selector: earlierGroup.selector },
-      next: { selector: laterGroup.selector },
-    })),
-);
-
-solidReactiveOrderRestrictions.push({
-  selector: `BlockStatement > ${solidEffectSelector} ~ :not(${solidEffectSelector}):not(ReturnStatement)`,
-  message: "Keep Solid effects at the bottom of the component, before return.",
-});
-
-const plugins = {
-  jsdoc,
-  sonarjs,
-  perfectionist,
-  "check-file": checkFile,
-  "@stylistic": stylistic,
-  "unused-imports": unusedImports,
-  "eslint-comments": eslintComments,
-};
-
-const commonRules = {
-  // File and folder names.
-  "check-file/filename-naming-convention": [
-    "error",
-    { "**/*.{js,mjs,cjs,jsx,ts,mts,cts,tsx}": "KEBAB_CASE" },
-    { ignoreMiddleExtensions: true },
-  ],
-  "check-file/folder-naming-convention": [
-    "error",
-    { "**/": "KEBAB_CASE" },
-    { ignoreWords: ["__mocks__", "__tests__"] },
-  ],
-
-  // Language and control flow.
-  "no-var": "error",
-  curly: ["error", "all"],
-  "prefer-template": "error",
-  eqeqeq: ["error", "always"],
-  "no-return-assign": "error",
-  "consistent-return": "error",
-  "no-param-reassign": "error",
-  "no-useless-concat": "error",
-  "prefer-object-spread": "error",
-  "require-atomic-updates": "error",
-  "no-promise-executor-return": "error",
-  "object-shorthand": ["error", "always"],
-  "no-else-return": ["error", { allowElseIf: false }],
-  "prefer-const": ["error", { destructuring: "all" }],
-  "prefer-arrow-callback": ["error", { allowNamedFunctions: false }],
-  "func-style": ["error", "expression", { allowArrowFunctions: true }],
-
-  // Diagnostics and complexity budgets.
-  "no-console": "warn",
-  "no-await-in-loop": "warn",
-  "no-nested-ternary": "warn",
-  "no-implicit-coercion": "warn",
-  complexity: ["warn", COMPLEXITY_LIMIT],
-  "max-depth": ["warn", MAX_NESTING_DEPTH],
-  "max-params": ["warn", FUNCTION_PARAMETER_LIMIT],
-  "max-lines-per-function": [
-    "warn",
-    {
-      skipComments: true,
-      skipBlankLines: true,
-      max: FUNCTION_LINE_LIMIT,
-    },
-  ],
-  "no-magic-numbers": [
-    "warn",
-    {
-      enforceConst: true,
-      detectObjects: false,
-      ignore: [-1, 0, 1, 2],
-      ignoreArrayIndexes: true,
-    },
-  ],
-
-  // Unused code.
-  "no-unused-vars": "off",
-  "@typescript-eslint/no-unused-vars": "off",
-  "unused-imports/no-unused-imports": "error",
-  "unused-imports/no-unused-vars": [
-    "warn",
-    {
-      vars: "all",
-      args: "after-used",
-      argsIgnorePattern: "^_",
-      varsIgnorePattern: "^_",
-    },
-  ],
-
-  // Maintainability checks.
-  "sonarjs/no-collapsible-if": "warn",
-  "sonarjs/no-identical-functions": "warn",
-  "sonarjs/no-duplicated-branches": "error",
-  "sonarjs/prefer-immediate-return": "warn",
-  "sonarjs/cognitive-complexity": ["warn", COGNITIVE_COMPLEXITY_LIMIT],
-
-  // ESLint directives.
-  "eslint-comments/no-unused-disable": "error",
-  "eslint-comments/require-description": "error",
-  "eslint-comments/disable-enable-pair": ["error", { allowWholeFile: true }],
-
-  // JSDoc.
-  "jsdoc/require-param": "off",
-  "jsdoc/check-syntax": "error",
-  "jsdoc/require-throws": "error",
-  "jsdoc/check-alignment": "error",
-  "jsdoc/check-param-names": "off",
-  "jsdoc/check-tag-names": "error",
-  "jsdoc/require-param-type": "off",
-  "jsdoc/require-returns-type": "off",
-  "jsdoc/require-param-description": "off",
-  "jsdoc/require-throws-description": "error",
-  "jsdoc/require-returns-description": "error",
-  "jsdoc/require-returns": ["error", { forceRequireReturn: false }],
-  "jsdoc/require-description": [
-    "error",
-    { contexts: ["any"], descriptionStyle: "body" },
-  ],
-  "jsdoc/sort-tags": [
-    "error",
-    {
-      linesBetween: 0,
-      tagSequence: [
-        { tags: ["-other"] },
-        { tags: ["return", "returns"] },
-        { tags: ["exception", "throws"] },
-      ],
-    },
-  ],
-  "jsdoc/match-description": [
-    "error",
-    {
-      contexts: ["any"],
-      mainDescription: {
-        match: `^[\\s\\S]{1,${JSDOC_DESCRIPTION_LIMIT}}$`,
-        message: `Keep the JSDoc description between 1 and ${JSDOC_DESCRIPTION_LIMIT} characters.`,
-      },
-    },
-  ],
-
-  // Local formatting policies not owned by Prettier.
-  "@stylistic/template-curly-spacing": ["error", "never"],
-  "perfectionist/sort-objects": [
-    "error",
-    {
-      order: "asc",
-      ignoreCase: true,
-      type: "line-length",
-      styledComponents: false,
-      partitionByComment: true,
-      partitionByNewLine: true,
-      fallbackSort: { type: "natural" },
-      useExperimentalDependencyDetection: true,
-    },
-  ],
-};
-
-const typescriptRules = {
-  "@typescript-eslint/no-unnecessary-condition": "warn",
-  "@typescript-eslint/no-import-type-side-effects": "off",
-  "@typescript-eslint/switch-exhaustiveness-check": "error",
-  "@typescript-eslint/no-confusing-void-expression": "error",
-  "@typescript-eslint/return-await": ["error", "in-try-catch"],
-  "no-restricted-syntax": ["error", inlineTypeImportRestriction],
-  "@typescript-eslint/consistent-type-imports": [
-    "error",
-    { prefer: "type-imports", fixStyle: "inline-type-imports" },
-  ],
-};
-
-const structuralRules = {
-  "@stylistic/no-multiple-empty-lines": [
-    "error",
-    { max: 1, maxBOF: 0, maxEOF: 0 },
-  ],
-  "@stylistic/lines-between-class-members": [
-    "error",
-    "always",
-    { exceptAfterOverload: true, exceptAfterSingleLine: true },
-  ],
-  "@stylistic/padding-line-between-statements": [
-    "error",
-    { next: "*", prev: "directive", blankLine: "always" },
-    { blankLine: "any", next: "directive", prev: "directive" },
-    { next: "*", prev: "import", blankLine: "always" },
-    { next: "import", prev: "import", blankLine: "any" },
-    {
-      blankLine: "always",
-      prev: ["const", "let", "var"],
-      next: ["block", "block-like", "return", "throw"],
-    },
-    ...solidReactivePaddingRules,
-  ],
-};
-
-const baseImportOrder = {
-  order: "asc",
-  type: "natural",
-  ignoreCase: true,
-  newlinesInside: 0,
-  newlinesBetween: 0,
-  sortSideEffects: false,
-  partitionByNewLine: false,
-  fallbackSort: { order: "asc", type: "alphabetical" },
-};
-
-const customGroup = (groupName, elementNamePattern, modifiers) => ({
-  groupName,
-  elementNamePattern,
-  ...(modifiers && { modifiers }),
-});
-
-const namedImportOrder = {
-  order: "asc",
-  type: "natural",
-  ignoreCase: true,
-  newlinesBetween: 0,
-  groups: ["value-import", "type-import"],
-};
-
-const createFrontendImportOrder = (frameworkGroups) => ({
-  ...baseImportOrder,
-  internalPattern: ["^@/"],
-  groups: [
-    "styles",
-    "side-effect-style",
-    separator,
-    ...frameworkGroups.map(([name]) => name),
-    ["value-external", "type-external"],
-    "zod",
-    "valibot",
-    "clsx",
-    separator,
-    // Preserve author-defined ordering and spacing for local imports.
-    { group: "unknown", type: "unsorted", newlinesInside: "ignore" },
-  ],
-  customGroups: [
-    customGroup("styles", "\\.(?:css|less|sass|scss|styl)(?:\\?.*)?$"),
-    ...frameworkGroups.map(([name, pattern]) => customGroup(name, pattern)),
-    customGroup("zod", "^zod(?:/|$)"),
-    customGroup("valibot", "^valibot(?:/|$)"),
-    customGroup("clsx", "^clsx$"),
-  ],
-});
-
-const frameworkImports = [
-  ["solid", "^solid-js(?:/|$)"],
-  ["solid-ecosystem", "^(?:@solidjs|solid-.+)(?:/|$)"],
+const testFiles = [
+  "**/*.{test,spec}.{js,jsx,ts,tsx}",
+  "**/*.stories.{js,jsx,ts,tsx}",
+  "**/__tests__/**/*.{js,jsx,ts,tsx}",
+  "**/__mocks__/**/*.{js,jsx,ts,tsx}",
 ];
 
-const propsRestrictions = [
-  ...[
-    "FunctionDeclaration[id.name=/^[A-Z]/][params.0.type='ObjectPattern']:has(JSXElement, JSXFragment)",
-    "VariableDeclarator[id.name=/^[A-Z]/] > ArrowFunctionExpression[params.0.type='ObjectPattern']:has(JSXElement, JSXFragment)",
-    "VariableDeclarator[id.name=/^[A-Z]/] > FunctionExpression[params.0.type='ObjectPattern']:has(JSXElement, JSXFragment)",
-  ].map((selector) => ({
-    selector,
-    message: "Keep Solid component props as an object to preserve reactivity.",
-  })),
-  ...[
-    "FunctionDeclaration[id.name=/^[A-Z]/][params.0.type='Identifier'][params.0.name!='props']:has(JSXElement, JSXFragment)",
-    "VariableDeclarator[id.name=/^[A-Z]/] > ArrowFunctionExpression[params.0.type='Identifier'][params.0.name!='props']:has(JSXElement, JSXFragment)",
-    "VariableDeclarator[id.name=/^[A-Z]/] > FunctionExpression[params.0.type='Identifier'][params.0.name!='props']:has(JSXElement, JSXFragment)",
-  ].map((selector) => ({
-    selector,
-    message: 'Name the Solid component props parameter "props".',
-  })),
-];
+const solidCorrectnessRules = new Set([
+  "solid/components-return-once",
+  "solid/event-handlers",
+  "solid/imports",
+  "solid/no-react-deps",
+  "solid/no-react-specific-props",
+  "solid/reactivity",
+]);
 
-const componentFunctionSelectors = [
-  "FunctionDeclaration[id.name=/^[A-Z]/]:has(JSXElement, JSXFragment)",
-  "VariableDeclarator[id.name=/^[A-Z]/] > ArrowFunctionExpression:has(JSXElement, JSXFragment)",
-  "VariableDeclarator[id.name=/^[A-Z]/] > FunctionExpression:has(JSXElement, JSXFragment)",
-];
-const staticComponentConstantRestrictions = componentFunctionSelectors.flatMap(
-  (componentSelector) =>
-    [
-      "VariableDeclaration[kind='const']:has(> VariableDeclarator[init.type='Literal'])",
-      "VariableDeclaration[kind='const']:has(> VariableDeclarator[init.type='ObjectExpression']):not(:has(Property[value.type!='Literal'], SpreadElement))",
-      "VariableDeclaration[kind='const']:has(> VariableDeclarator[init.type='ArrayExpression']):not(:has(SpreadElement, Property[value.type!='Literal'], ArrayExpression > :not(Literal, ObjectExpression, ArrayExpression)))",
-    ].map((constantSelector) => ({
-      selector: `${componentSelector} > BlockStatement > ${constantSelector}`,
-      message: "Move component-independent constants to module scope.",
-    })),
-);
+const severityOf = (value) => (Array.isArray(value) ? value[0] : value);
+const isWarning = (value) => {
+  const severity = severityOf(value);
+  return severity === "warn" || severity === 1;
+};
+const normalizeWarnings = (rules, promotedRules) =>
+  Object.fromEntries(
+    Object.entries(rules).map(([ruleName, setting]) => {
+      if (!isWarning(setting)) {
+        return [ruleName, setting];
+      }
+      return [ruleName, promotedRules.has(ruleName) ? "error" : "off"];
+    }),
+  );
+
+const defaultExportRestriction = {
+  selector: "Program:not(:has(ExportDefaultDeclaration))",
+  message: "Component files must have a default export.",
+};
+const conciseArrowRestriction = {
+  selector:
+    "VariableDeclarator[id.name=/^[A-Z]/] > ArrowFunctionExpression[body.type!='BlockStatement']:has(JSXElement, JSXFragment)",
+  message:
+    "Write Solid components with a block body and an explicit return statement.",
+};
+const explicitReturnRestrictions = [
+  "FunctionDeclaration[id.name=/^[A-Z]/]:has(JSXElement, JSXFragment):not(:has(ReturnStatement))",
+  "VariableDeclarator[id.name=/^[A-Z]/] > ArrowFunctionExpression[body.type='BlockStatement']:has(JSXElement, JSXFragment):not(:has(ReturnStatement))",
+  "VariableDeclarator[id.name=/^[A-Z]/] > FunctionExpression:has(JSXElement, JSXFragment):not(:has(ReturnStatement))",
+].map((selector) => ({
+  selector,
+  message: "Solid components must contain an explicit return statement.",
+}));
 
 const componentRestrictions = [
-  {
-    selector: "Program:not(:has(ExportDefaultDeclaration))",
-    message: "Component files must have a default export.",
-  },
-  {
-    selector: "ExportNamedDeclaration",
-    message: "Use only a default export in component files.",
-  },
-  {
-    selector:
-      "VariableDeclarator[id.name=/^[A-Z]/] > ArrowFunctionExpression[body.type!='BlockStatement']:has(JSXElement, JSXFragment)",
-    message:
-      "Write Solid components with a block body and an explicit return statement.",
-  },
-  ...staticComponentConstantRestrictions,
-  ...[
-    "FunctionDeclaration[id.name=/^[A-Z]/]:has(JSXElement, JSXFragment):not(:has(ReturnStatement))",
-    "VariableDeclarator[id.name=/^[A-Z]/] > ArrowFunctionExpression[body.type='BlockStatement']:has(JSXElement, JSXFragment):not(:has(ReturnStatement))",
-    "VariableDeclarator[id.name=/^[A-Z]/] > FunctionExpression:has(JSXElement, JSXFragment):not(:has(ReturnStatement))",
-  ].map((selector) => ({
-    selector,
-    message: "Solid components must contain an explicit return statement.",
-  })),
+  defaultExportRestriction,
+  conciseArrowRestriction,
+  ...explicitReturnRestrictions,
 ];
 
 export default tseslint.config(
   {
     name: "@module-foundry/eslint/solidjs/ignores",
     ignores: [
-      "coverage/**",
-      "dist/**",
-      "playgrounds/**",
-      "node_modules/**",
-      "test/**",
+      "**/node_modules/**",
+      "**/dist/**",
+      "**/build/**",
+      "**/coverage/**",
+      "**/.turbo/**",
+      "**/.vite/**",
+      "**/.output/**",
+      "**/out/**",
+      "**/storybook-static/**",
     ],
   },
   {
+    name: "@module-foundry/eslint/solidjs/linter-options",
+    linterOptions: {
+      reportUnusedDisableDirectives: "error",
+    },
+  },
+  {
     ...eslint.configs.recommended,
-    files: sourceFiles,
     name: "@module-foundry/eslint/solidjs/javascript",
+    files: sourceFiles,
   },
   ...tseslint.configs.recommendedTypeChecked.map((config) => ({
     ...config,
     files: typescriptFiles,
   })),
   {
-    ...regexp.configs["flat/recommended"],
-    files: sourceFiles,
-    name: "@module-foundry/eslint/solidjs/regexp",
+    ...solid.configs["flat/typescript"],
+    name: "@module-foundry/eslint/solidjs/solid",
+    files: frontendFiles,
+    rules: normalizeWarnings(
+      solid.configs["flat/typescript"].rules,
+      solidCorrectnessRules,
+    ),
   },
   {
-    plugins,
+    name: "@module-foundry/eslint/solidjs/check-file",
     files: sourceFiles,
-    rules: commonRules,
-    name: "@module-foundry/eslint/solidjs/common",
-    settings: {
-      jsdoc: {
-        mode: "typescript",
-      },
+    plugins: {
+      "check-file": checkFile,
     },
     languageOptions: {
       ecmaVersion: "latest",
       globals: globals.es2024,
     },
+    rules: {
+      "check-file/filename-naming-convention": [
+        "error",
+        { "**/*.{js,mjs,cjs,jsx,ts,mts,cts,tsx}": "KEBAB_CASE" },
+        { ignoreMiddleExtensions: true },
+      ],
+      "check-file/folder-naming-convention": [
+        "error",
+        { "**/": "KEBAB_CASE" },
+        { ignoreWords: ["__mocks__", "__tests__"] },
+      ],
+    },
   },
   {
-    files: typescriptFiles,
-    rules: typescriptRules,
+    name: "@module-foundry/eslint/solidjs/quality",
+    files: sourceFiles,
+    plugins: {
+      jsdoc,
+      "eslint-comments": eslintComments,
+    },
+    settings: {
+      jsdoc: {
+        mode: "typescript",
+      },
+    },
+    rules: {
+      "no-console": ["error", { allow: ["warn", "error"] }],
+      "no-magic-numbers": [
+        "error",
+        {
+          enforceConst: true,
+          detectObjects: false,
+          ignore: [-1, 0, 1, 2],
+          ignoreArrayIndexes: true,
+          ignoreDefaultValues: true,
+          ignoreEnums: true,
+        },
+      ],
+      "eslint-comments/require-description": "error",
+      "jsdoc/check-syntax": "error",
+      "jsdoc/check-tag-names": "error",
+      "jsdoc/empty-tags": "error",
+      "jsdoc/no-blank-block-descriptions": "error",
+      "jsdoc/require-throws": "error",
+      "jsdoc/require-throws-description": "error",
+      "jsdoc/require-returns": ["error", { forceRequireReturn: false }],
+      "jsdoc/require-returns-description": "error",
+      "jsdoc/require-description": [
+        "error",
+        { contexts: ["any"], descriptionStyle: "body" },
+      ],
+      "jsdoc/match-description": [
+        "error",
+        {
+          contexts: ["any"],
+          mainDescription: {
+            match: "^[\\s\\S]{1,300}$",
+            message: "Keep the JSDoc description between 1 and 300 characters.",
+          },
+        },
+      ],
+    },
+  },
+  {
     name: "@module-foundry/eslint/solidjs/typescript-type-checked",
+    files: typescriptFiles,
     languageOptions: {
       parserOptions: {
-        projectService: true,
+        projectService: {
+          allowDefaultProject: ["*.{js,mjs,cjs,ts,mts,cts}"],
+        },
         tsconfigRootDir: cwd(),
       },
     },
+    rules: {
+      "@typescript-eslint/switch-exhaustiveness-check": "error",
+    },
   },
-  ...[solid.configs["flat/typescript"]].map((config) => ({
-    ...config,
-    files: frontendFiles,
-  })),
   {
+    name: "@module-foundry/eslint/solidjs/browser",
     files: frontendFiles,
-    name: "@module-foundry/eslint/solidjs/framework",
     languageOptions: {
       globals: globals.browser,
       parserOptions: {
@@ -452,43 +207,25 @@ export default tseslint.config(
         },
       },
     },
+  },
+  {
+    name: "@module-foundry/eslint/solidjs/component-contract",
+    files: componentFiles,
     rules: {
-      "perfectionist/sort-named-imports": ["error", namedImportOrder],
-      "perfectionist/sort-imports": [
-        "error",
-        createFrontendImportOrder(frameworkImports),
-      ],
-      "no-restricted-syntax": [
-        "error",
-        inlineTypeImportRestriction,
-        ...propsRestrictions,
-        ...solidReactiveOrderRestrictions,
-      ],
-      "@stylistic/jsx-curly-brace-presence": [
-        "error",
-        { props: "always", children: "ignore", propElementValues: "ignore" },
-      ],
+      "no-restricted-syntax": ["error", ...componentRestrictions],
     },
   },
   {
-    files: componentFiles,
-    name: "@module-foundry/eslint/solidjs/component-exports",
+    name: "@module-foundry/eslint/solidjs/tests-and-stories",
+    files: testFiles,
     rules: {
-      "no-restricted-syntax": [
-        "error",
-        inlineTypeImportRestriction,
-        ...propsRestrictions,
-        ...componentRestrictions,
-        ...solidReactiveOrderRestrictions,
-      ],
+      "no-console": "off",
+      "no-magic-numbers": "off",
+      "no-restricted-syntax": "off",
     },
   },
   {
     ...prettierConfig,
     name: "@module-foundry/eslint/solidjs/prettier-compatibility",
-  },
-  {
-    rules: structuralRules,
-    name: "@module-foundry/eslint/solidjs/structural-formatting",
   },
 );

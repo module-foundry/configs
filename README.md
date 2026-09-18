@@ -33,8 +33,8 @@ the tools used by the selected exports.
 | ReactJS | `@module-foundry/configs/reactjs/eslint` | `@module-foundry/configs/reactjs/typescript` |
 | SolidJS | `@module-foundry/configs/solidjs/eslint` | `@module-foundry/configs/solidjs/typescript` |
 
-NestJS and ReactJS use ESLint 10. SolidJS uses ESLint 9 because the current
-`eslint-plugin-solid` release does not support ESLint 10.
+All profiles use ESLint 10. `eslint-plugin-solid` supports ESLint 10 since
+version 0.18.0.
 
 ## Common configurations
 
@@ -89,51 +89,56 @@ by an empty line.
 
 ## ESLint profiles
 
-The ESLint presets use type-aware rules. Until `typescript-eslint` supports the
-TypeScript 7 compiler API, keep the TypeScript 6 API under the package name
-`typescript` and install TypeScript 7 through an alias for the `tsc` command:
+The ESLint presets use type-aware rules. Install TypeScript inside the range
+supported by `typescript-eslint`. The current ceiling comes from
+`typescript-eslint` (`<6.1`), so install the latest compatible release:
 
 ```json
 {
   "devDependencies": {
-    "typescript": "npm:@typescript/typescript6@^6.0.2",
-    "typescript-native": "npm:typescript@^7.0.2"
+    "typescript": "^6.0.3"
   }
 }
 ```
 
-The complete peer list is intentionally explicit in `package.json`. The
-playgrounds contain ready-to-copy dependency sets for each profile.
+No alias packages or separate `tsc` installations are required. When
+`typescript-eslint` supports TypeScript 7, the ceiling will be raised in a new
+release.
 
 Run ESLint from the consumer project root, or from a monorepo root that contains
 the projects being linted. The presets use that working directory as the
 `tsconfigRootDir`; TypeScript's project service then selects the nearest
-`tsconfig.json` for each source file.
+`tsconfig.json` for each source file. Root-level config files that are not part
+of a `tsconfig.json` are accepted through `allowDefaultProject`.
 
-Named type imports use inline type specifiers:
+Every rule in the presets is an error: the presets emit no warnings. Advisory
+warn-level rules from the underlying plugin presets are either promoted to
+errors or disabled deliberately.
 
-```ts
-import { type JSX } from "react";
-```
+### Installation
 
-The profiles reject the separate `import type { JSX } from "react"` form.
-
-ReactJS and SolidJS treat every `.jsx` and `.tsx` file as a component file.
-Component files must have a default export and cannot contain named exports.
-Component functions must use block bodies with explicit `return` statements.
-
-All three ESLint profiles require JavaScript and TypeScript source filenames,
-and their folder names, to use `kebab-case`. This includes ReactJS and SolidJS
-component, hook, and utility files. Middle extensions are ignored, so names
-such as `user-card.test.tsx` are valid; `__tests__` and `__mocks__` folders are
-also allowed.
-
-Install `eslint-plugin-check-file` together with the other peer packages used
-by the selected ESLint profile:
+ReactJS:
 
 ```sh
-pnpm add --save-dev eslint-plugin-check-file
+pnpm add --save-dev @module-foundry/configs prettier \
+  eslint @eslint/js typescript typescript-eslint \
+  @eslint-community/eslint-plugin-eslint-comments \
+  @eslint-react/eslint-plugin eslint-plugin-react-hooks \
+  eslint-plugin-check-file eslint-plugin-jsdoc \
+  eslint-config-prettier globals
 ```
+
+SolidJS:
+
+```sh
+pnpm add --save-dev @module-foundry/configs prettier \
+  eslint @eslint/js typescript typescript-eslint \
+  @eslint-community/eslint-plugin-eslint-comments \
+  eslint-plugin-solid eslint-plugin-check-file eslint-plugin-jsdoc \
+  eslint-config-prettier globals
+```
+
+### Configuration
 
 NestJS ESLint configuration:
 
@@ -164,6 +169,79 @@ Project-level TypeScript configuration:
   "include": ["src"]
 }
 ```
+
+### Component conventions
+
+ReactJS and SolidJS treat every `.jsx` and `.tsx` file as a component file:
+
+- component files must have a default export; named exports such as interfaces
+  and types are allowed;
+- component functions must use a block body with an explicit `return`.
+
+Exceptions:
+
+- Next.js App Router folders under `app/` may use `[param]`, `[...slug]`,
+  `(group)`, and `@slot` names;
+- test, story, and mock files (`*.test.*`, `*.spec.*`, `*.stories.*`,
+  `__tests__`, `__mocks__`) are exempt from the default-export requirement.
+
+SolidJS component props are handled by `eslint-plugin-solid`: destructuring
+component props is an error because it breaks reactivity.
+
+All ESLint profiles require JavaScript and TypeScript source filenames, and
+their folder names, to use `kebab-case`. Middle extensions are ignored, so names
+such as `user-card.test.tsx` are valid; `__tests__` and `__mocks__` folders are
+also allowed.
+
+### Quality rules
+
+- `no-console` is an error; `console.warn` and `console.error` are allowed.
+- `no-magic-numbers` is an error; use named constants. `-1`, `0`, `1`, `2`,
+  array indexes, enum members, and default parameter values are exempt.
+- JSDoc blocks require a meaningful description (1-300 characters), and
+  `@returns` and `@throws` descriptions are required when those tags are used.
+- `eslint-disable` directives must carry a description, for example
+  `// eslint-disable-next-line rule-name -- reason`. Unused disable directives
+  are errors.
+- Test and story files are exempt from `no-console` and `no-magic-numbers`.
+
+### Next.js App Router
+
+The ReactJS preset supports App Router files without additional overrides.
+Pages, layouts, and other route files keep the component contract (default
+export, block body) and accept dynamic and grouped route folders; named exports
+such as `metadata` are allowed. Layer `eslint-config-next` on top of the preset
+when you need Next.js-specific rules.
+
+### AI agent quickstart
+
+Add these instructions to the consuming project so AI agents generate code that
+passes the presets:
+
+- use `kebab-case` for every file and folder;
+- give each `.jsx` and `.tsx` file a default export; named exports such as
+  interfaces are allowed (test and story files are exempt);
+- write components as `const Name = (): JSX.Element => { return ...; };`;
+- do not destructure Solid props; access them as `props.name`;
+- extract repeated numbers into named constants and keep `console.log` out of
+  source files;
+- document every JSDoc block with a description and describe `@returns` and
+  `@throws` tags; add a reason to every `eslint-disable` directive;
+- after changes run `pnpm exec eslint . --fix && pnpm exec prettier --write .`,
+  then `pnpm exec tsc --noEmit`.
+
+### Hardening
+
+The presets cover correctness and hygiene, not architecture. Layer more rules
+when a project needs them:
+
+- `eslint-config-next` for Next.js-specific rules;
+- architecture or module-boundary plugins when the project enforces a structure,
+  for example Feature-Sliced Design;
+- complexity and duplication budgets (`complexity`, `max-lines-per-function`,
+  `sonarjs/*`) as an additional strict layer.
+
+Keep added rules at error level so the project stays warning-free.
 
 ## Repository layout
 
